@@ -141,7 +141,7 @@ satisfiable :: SATSolver
 satisfiable p = or [eval p ρ | ρ <- valuations (variables p)]
 
 tautology :: Formula -> Bool
-tautology p = and [eval p ρ | ρ <- valuations (variables p)]
+tautology p = not (satisfiable (Not p))
 
 is_nnf :: Formula -> Bool
 is_nnf T = True
@@ -212,7 +212,11 @@ test_dnf p = tautology $ p ⇔ (dnf2formula (dnf p))
 -- >>> quickCheckWith (stdArgs {maxSize = 18}) test_dnf
 
 sat_dnf :: SATSolver
-sat_dnf = satisfiable . dnf2formula . dnf
+sat_dnf = satisfiable_dnf . dnf where
+  satisfiable_dnf = any (not . conflict_in_conjunction)
+  conflict_in_conjunction conj = any (\(lit) -> negate lit `elem` conj) conj
+  negate (Pos p) = Neg p
+  negate (Neg p) = Pos p
 
 prop_sat_dnf :: Formula -> Bool
 prop_sat_dnf phi = sat_dnf phi == satisfiable phi
